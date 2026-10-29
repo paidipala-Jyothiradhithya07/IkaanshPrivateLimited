@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Live balance demo</title>
+  <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 640px; margin: 2rem auto; }
+    input { width: 100%; padding: .5rem; margin: .25rem 0 .75rem; box-sizing: border-box; }
+    pre { background: #f4f4f4; padding: 1rem; min-height: 8rem; }
+  </style>
+</head>
+<body>
+  <h2>Real-time balance updates (STOMP over WebSocket)</h2>
+  <label>Access token (from POST /api/auth/login)</label>
+  <input id="token" placeholder="eyJhbGciOi...">
+  <button onclick="connect()">Connect</button>
+  <p id="status">Disconnected</p>
+  <p>Now create a transaction or import a CSV with curl - updates appear below.</p>
+  <pre id="log"></pre>
+  <script>
+    function connect() {
+      const client = new StompJs.Client({
+        brokerURL: (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws',
+        connectHeaders: { Authorization: 'Bearer ' + document.getElementById('token').value.trim() },
+        onConnect: () => {
+          document.getElementById('status').textContent = 'Connected';
+          client.subscribe('/user/queue/balance', m => {
+            document.getElementById('log').textContent = m.body + '\n' + document.getElementById('log').textContent;
+          });
+        },
+        onStompError: f => document.getElementById('status').textContent = 'Error: ' + f.headers['message'],
+        onWebSocketClose: () => document.getElementById('status').textContent = 'Disconnected'
+      });
+      client.activate();
+    }
+  </script>
+</body>
+</html>
